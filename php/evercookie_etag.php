@@ -47,7 +47,7 @@ if (empty($_COOKIE[$cookie_name])) {
     
     if(isset($headers['IF-NONE-MATCH'])) {
         // extracting value from ETag presented format (which may be prepended by Weak validator modifier)
-        $etag_value = preg_replace('|^(W/)?"(.+)"$|', '$2', $headers['If-None-Match']);
+        $etag_value = preg_replace('|^(W/)?"(.+)"$|', '$2', $headers['IF-NONE-MATCH']);
         header('HTTP/1.1 304 Not Modified');
         header('ETag: "' . $etag_value . '"');
         echo $etag_value;
