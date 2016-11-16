@@ -253,12 +253,10 @@ try {
             asseturi: '/assets', // assets = .fla, .jar, etc
             phpuri: '/php', // php file path or route
             authPath: false, //'/evercookie_auth.php', // set to false to disable Basic Authentication cache
-            pngCookieName: 'evercookie_png',
             pngPath: '/evercookie_png.php',
-            etagCookieName: 'evercookie_etag',
             etagPath: '/evercookie_etag.php',
-            cacheCookieName: 'evercookie_cache',
             cachePath: '/evercookie_cache.php',
+            valueHeader: 'X-Value',
             hsts: false,
             hsts_domains: [],
             db: true, // Database
@@ -279,11 +277,8 @@ try {
          * @param {String} options.asseturi asset path (eg: www.sitename.com/assets use /assets)
          * @param {String} options.phpuri php path/route (eg: www.sitename.com/php use /php)
          * @param {String|Function} options.domain as a string, domain for cookie, as a function, accept window object and return domain string
-         * @param {String} options.pngCookieName
          * @param {String} options.pngPath
-         * @param {String} options.etagCookieName:
          * @param {String} options.etagPath
-         * @param {String} options.cacheCookieName
          * @param {String} options.cachePath
          * @param {String} options.hsts    Turn hsts cookies on and off.
          * @param {Boolean} options.db    Turn db cookies on and off.
@@ -340,13 +335,13 @@ try {
                     if (opts.idb) {
                         self.evercookie_indexdb_storage(name, value);
                     }
-                    if (opts.pngCookieName) {
+                    if (opts.pngPath) {
                         self.evercookie_png(name, value);
                     }
-                    if (opts.etagCookieName) {
+                    if (opts.etagPath) {
                         self.evercookie_etag(name, value);
                     }
-                    if (opts.cacheCookieName) {
+                    if (opts.cachePath) {
                         self.evercookie_cache(name, value);
                     }
                     if (opts.lso) {
@@ -395,15 +390,15 @@ try {
                 // when reading data, we need to wait for swf, db, silverlight, java and png
                 else {
                     if ((// we support local db and haven't read data in yet
-                            (opts.db && window.openDatabase && typeof self._ec.dbData === "undefined") ||
-                            (opts.idb && idb() && (typeof self._ec.idbData === "undefined" || self._ec.idbData === "")) ||
-                            (opts.lso && typeof _global_lso === "undefined") ||
-                            (opts.etagCookieName && typeof self._ec.etagData === "undefined") ||
-                            (opts.cacheCookieName && typeof self._ec.cacheData === "undefined") ||
-                            (opts.java && typeof self._ec.javaData === "undefined") ||
-                            (opts.hsts && (self._ec.hstsData === undefined || self.hsts_cookie.is_working())) ||
-                            (opts.pngCookieName && document.createElement("canvas").getContext && (typeof self._ec.pngData === "undefined" || self._ec.pngData === "")) ||
-                            (opts.silverlight && typeof _global_isolated === "undefined")) && i++ < _ec_tests) {
+                        (opts.db && window.openDatabase && typeof self._ec.dbData === "undefined") ||
+                        (opts.idb && idb() && (typeof self._ec.idbData === "undefined" || self._ec.idbData === "")) ||
+                        (opts.lso && typeof _global_lso === "undefined") ||
+                        (opts.etagPath && typeof self._ec.etagData === "undefined") ||
+                        (opts.cachePath && typeof self._ec.cacheData === "undefined") ||
+                        (opts.java && typeof self._ec.javaData === "undefined") ||
+                        (opts.hsts && (self._ec.hstsData === undefined || self.hsts_cookie.is_working())) ||
+                        (opts.pngPath && document.createElement("canvas").getContext && (typeof self._ec.pngData === "undefined" || self._ec.pngData === "")) ||
+                        (opts.silverlight && typeof _global_isolated === "undefined")) && i++ < _ec_tests) {
                         setTimeout(function () {
                             self._evercookie(name, cb, value, i, dont_reset);
                         }, 300);
@@ -469,12 +464,12 @@ try {
                 catch (e) {
                 }
             };
-            this.ajax = function (settings) {
-                var headers, name, transports, transport, i, length;
-                headers = {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'text/javascript, text/html, application/xml, text/xml, */*'
-                };
+            this.ajax = function (settings, headers) {
+                var name, transports, transport, i, length;
+
+                if(headers === undefined) headers = {};
+                headers['X-Requested-With'] = 'XMLHttpRequest';
+                headers['Accept'] = 'text/javascript, text/html, application/xml, text/xml, */*';
 
                 transports = [function () {
                     return new XMLHttpRequest();
@@ -508,30 +503,33 @@ try {
 
             this.evercookie_cache = function (name, value) {
                 if (value !== undefined) {
-                    // make sure we have evercookie session defined first
-                    document.cookie = opts.cacheCookieName + "=" + value + "; path=/; domain=" + _ec_domain; // {{ajax request to opts.cachePath}} handles caching
+                    var header = {};
+                    header[opts.valueHeader] = value;
                     self.ajax(
-                            {
-                                url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name + "&cookie=" + opts.cacheCookieName,
-                                success: function (data) {
-                                }
-                            });
+                        {
+                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".json",
+                            success: function (data) {
+                            }
+                        },
+                        header
+                    );
                 }
                 else {
                     // interestingly enough, we want to erase our evercookie
                     // http cookie so the php will force a cached response
-                    var origvalue = this.getFromStr(opts.cacheCookieName, document.cookie);
                     self._ec.cacheData = undefined;
-                    document.cookie = opts.cacheCookieName + "=; expires=Mon, 20 Sep 2010 00:00:00 UTC; path=/; domain=" + _ec_domain;
                     self.ajax(
-                            {
-                                url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name + "&cookie=" + opts.cacheCookieName,
-                                success: function (data) {
-                                    // put our cookie back
-                                    document.cookie = opts.cacheCookieName + "=" + origvalue + "; expires=Tue, 31 Dec 2030 00:00:00 UTC; path=/; domain=" + _ec_domain;
-                                    self._ec.cacheData = data;
+                        {
+                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".json",
+                            success: function (data) {
+                                try {
+                                    self._ec.cacheData = JSON.parse(data);
                                 }
-                            });
+                                catch (e) {
+
+                                }
+                            }
+                        });
                 }
             };
 
@@ -542,41 +540,40 @@ try {
                 }
                 else {
                     self.ajax(
-                            {
-                                url: _ec_baseurl + _ec_phpuri + opts.authPath + "?name=" + name,
-                                success: function (data) {
-                                    self._ec.authData = data;
-                                }
-                            });
+                        {
+                            url: _ec_baseurl + _ec_phpuri + opts.authPath + "?name=" + name,
+                            success: function (data) {
+                                self._ec.authData = data;
+                            }
+                        });
                 }
             };
 
             this.evercookie_etag = function (name, value) {
                 if (value !== undefined) {
+                    var header = {};
+                    header[opts.valueHeader] = value;
                     // make sure we have evercookie session defined first
-                    document.cookie = opts.etagCookieName + "=" + value + "; path=/; domain=" + _ec_domain; // {{ajax request to opts.etagPath}} handles etagging
                     self.ajax(
-                            {
-                                url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name + "&cookie=" + opts.etagCookieName,
-                                success: function (data) {
-                                }
-                            });
+                        {
+                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".html",
+                            success: function (data) {
+                            }
+                        },
+                        header
+                    );
                 }
                 else {
                     // interestingly enough, we want to erase our evercookie
                     // http cookie so the php will force a cached response
-                    var origvalue = this.getFromStr(opts.etagCookieName, document.cookie);
                     self._ec.etagData = undefined;
-                    document.cookie = opts.etagCookieName + "=; expires=Mon, 20 Sep 2010 00:00:00 UTC; path=/; domain=" + _ec_domain;
                     self.ajax(
-                            {
-                                url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name + "&cookie=" + opts.etagCookieName,
-                                success: function (data) {
-                                    // put our cookie back
-                                    document.cookie = opts.etagCookieName + "=" + origvalue + "; expires=Tue, 31 Dec 2030 00:00:00 UTC; path=/; domain=" + _ec_domain;
-                                    self._ec.etagData = data;
-                                }
-                            });
+                        {
+                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".html",
+                            success: function (data) {
+                                self._ec.etagData = data;
+                            }
+                        });
                 }
             };
 
@@ -604,7 +601,7 @@ try {
                         width: "1px",
                         height: "1px",
                         placeholder: "ecAppletContainer"
-                    }, {}, {onJavascriptReady: doSetOrGet}); // When the applet is loaded we will continue in doSetOrGet() 
+                    }, {}, {onJavascriptReady: doSetOrGet}); // When the applet is loaded we will continue in doSetOrGet()
                 }
                 else {
                     // applet already running... call doGetOrSet() directly.
@@ -647,25 +644,35 @@ try {
                 canvas.width = 200;
                 canvas.height = 1;
                 if (canvas && canvas.getContext) {
+                    var imageurl = _ec_baseurl + _ec_phpuri + "/" + name + ".png";
+
                     // {{opts.pngPath}} handles the hard part of generating the image
                     // based off of the http cookie and returning it cached
                     img = new Image();
                     img.style.visibility = "hidden";
                     img.style.position = "absolute";
+
                     if (value !== undefined) {
+                        var header = {};
+                        header[opts.valueHeader] = value;
+
                         // make sure we have evercookie session defined first
-                        document.cookie = opts.pngCookieName + "=" + value + "; path=/; domain=" + _ec_domain;
+                        self.ajax(
+                            {
+                                url: imageurl,
+                                success: function (data) {
+                                    img.src = imageurl;
+                                }
+                            },
+                            header
+                        );
                     }
                     else {
                         self._ec.pngData = undefined;
                         ctx = canvas.getContext("2d"); // interestingly enough, we want to erase our evercookie
-                        // http cookie so the php will force a cached response
-                        origvalue = this.getFromStr(opts.pngCookieName, document.cookie);
-                        document.cookie = opts.pngCookieName + "=; expires=Mon, 20 Sep 2010 00:00:00 UTC; path=/; domain=" + _ec_domain;
-
+                        img.src = imageurl;
+                        img.crossOrigin = 'Anonymous';
                         img.onload = function () {
-                            // put our cookie back
-                            document.cookie = opts.pngCookieName + "=" + origvalue + "; expires=Tue, 31 Dec 2030 00:00:00 UTC; path=/; domain=" + _ec_domain;
                             self._ec.pngData = "";
                             ctx.drawImage(img, 0, 0); // get CanvasPixelArray from  given coordinates and dimensions
                             var imgd = ctx.getImageData(0, 0, 200, 1), pix = imgd.data, i, n; // loop over each pixel to get the "RGB" values (ignore alpha)
@@ -685,8 +692,6 @@ try {
                             }
                         };
                     }
-                    img.src = _ec_baseurl + _ec_phpuri + opts.pngPath + "?name=" + name + "&cookie=" + opts.pngCookieName;
-                    img.crossOrigin = 'Anonymous';
                 }
             };
 
