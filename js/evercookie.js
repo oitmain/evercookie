@@ -498,7 +498,12 @@ try {
                 for (name in headers) {
                     transport.setRequestHeader(name, headers[name]);
                 }
-                transport.send();
+
+                try {
+                    transport.send();
+                } catch(err) {
+                }
+
             };
 
             this.evercookie_cache = function (name, value) {
@@ -507,7 +512,9 @@ try {
                     header[opts.valueHeader] = value;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name,
+                            url: (opts.cachePath instanceof Function) ?
+                                opts.cachePath(_ec_baseurl, _ec_phpuri, name) :
+                                (_ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name),
                             success: function (data) {
                             }
                         },
@@ -520,7 +527,9 @@ try {
                     self._ec.cacheData = undefined;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name,
+                            url: (opts.cachePath instanceof Function) ?
+                                opts.cachePath(_ec_baseurl, _ec_phpuri, name) :
+                                (_ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name),
                             success: function (data) {
                                 self._ec.cacheData = data;
                             }
@@ -551,7 +560,9 @@ try {
                     // make sure we have evercookie session defined first
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name,
+                            url: (opts.etagPath instanceof Function) ?
+                                opts.etagPath(_ec_baseurl, _ec_phpuri, name) :
+                                (_ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name),
                             success: function (data) {
                             }
                         },
@@ -564,7 +575,9 @@ try {
                     self._ec.etagData = undefined;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name,
+                            url: (opts.etagPath instanceof Function) ?
+                                opts.etagPath(_ec_baseurl, _ec_phpuri, name) :
+                                (_ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name),
                             success: function (data) {
                                 self._ec.etagData = data;
                             }
@@ -639,7 +652,9 @@ try {
                 canvas.width = 200;
                 canvas.height = 1;
                 if (canvas && canvas.getContext) {
-                    var imageurl = _ec_baseurl + _ec_phpuri + "/" + name + ".png";
+                    var imageurl = (opts.pngPath instanceof Function) ?
+                        opts.pngPath(_ec_baseurl, _ec_phpuri, name) :
+                        (_ec_baseurl + _ec_phpuri + opts.pngPath + "?name=" + name);
 
                     // {{opts.pngPath}} handles the hard part of generating the image
                     // based off of the http cookie and returning it cached
@@ -1172,4 +1187,3 @@ try {
 }
 catch (ex) {
 }
- 
