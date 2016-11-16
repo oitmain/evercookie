@@ -507,7 +507,7 @@ try {
                     header[opts.valueHeader] = value;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".json",
+                            url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name,
                             success: function (data) {
                             }
                         },
@@ -520,14 +520,9 @@ try {
                     self._ec.cacheData = undefined;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".json",
+                            url: _ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name,
                             success: function (data) {
-                                try {
-                                    self._ec.cacheData = JSON.parse(data);
-                                }
-                                catch (e) {
-
-                                }
+                                self._ec.cacheData = data;
                             }
                         });
                 }
@@ -556,7 +551,7 @@ try {
                     // make sure we have evercookie session defined first
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".html",
+                            url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name,
                             success: function (data) {
                             }
                         },
@@ -569,7 +564,7 @@ try {
                     self._ec.etagData = undefined;
                     self.ajax(
                         {
-                            url: _ec_baseurl + _ec_phpuri + "/" + name + ".html",
+                            url: _ec_baseurl + _ec_phpuri + opts.etagPath + "?name=" + name,
                             success: function (data) {
                                 self._ec.etagData = data;
                             }
