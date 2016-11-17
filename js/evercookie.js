@@ -256,6 +256,7 @@ try {
             pngPath: '/evercookie_png.php',
             etagPath: '/evercookie_etag.php',
             cachePath: '/evercookie_cache.php',
+            clearCachePath: '/evercookie_clear_cache.php',
             valueHeader: 'X-Value',
             hsts: false,
             hsts_domains: [],
@@ -381,7 +382,10 @@ try {
                 }
                 // when writing data, we need to make sure lso and silverlight object is there
                 if (value !== undefined) {
-                    if ((typeof _global_lso === "undefined" || typeof _global_isolated === "undefined" || self._ec.hstsData === undefined || self.hsts_cookie.is_working()) && (i++) < _ec_tests) {
+                    if ((
+                        (opts.lso && typeof _global_lso === "undefined") ||
+                        (opts.silverlight && typeof _global_isolated === "undefined") ||
+                        (opts.hsts && (self._ec.hstsData === undefined || self.hsts_cookie.is_working()))) && (i++) < _ec_tests) {
                         setTimeout(function () {
                             self._evercookie(name, cb, value, i, dont_reset);
                         }, 300);
@@ -505,16 +509,20 @@ try {
                 }
 
             };
-
+            this.evercookie_cache_url = function(name) {
+                return (opts.cachePath instanceof Function) ?opts.cachePath(_ec_baseurl, _ec_phpuri, name):
+                    (_ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name);
+            };
+            this.evercookie_cache_clear = function(name) {
+                this.evercookie_clear_cache(this.evercookie_cache_url(name));
+            };
             this.evercookie_cache = function (name, value) {
                 if (value !== undefined) {
                     var header = {};
                     header[opts.valueHeader] = value;
                     self.ajax(
                         {
-                            url: (opts.cachePath instanceof Function) ?
-                                opts.cachePath(_ec_baseurl, _ec_phpuri, name) :
-                                (_ec_baseurl + _ec_phpuri + opts.cachePath + "?name=" + name),
+                            url: this.evercookie_cache_url(name),
                             success: function (data) {
                             }
                         },
@@ -535,6 +543,18 @@ try {
                             }
                         });
                 }
+            };
+
+            this.evercookie_clear_cache = function(url) {
+                var i = document.createElement('iframe');
+                i.style.display = 'none';
+                i.src = (opts.clearCachePath instanceof Function) ?
+                    opts.clearCachePath(_ec_baseurl, _ec_phpuri, url) :
+                    (_ec_baseurl + _ec_phpuri + opts.clearCachePath + "?url=" + encodeURI(url));
+                document.body.appendChild(i);
+                setTimeout(function () {
+                    i.parentNode.removeChild(i);
+                }, 1000);
             };
 
             this.evercookie_auth = function (name, value) {
